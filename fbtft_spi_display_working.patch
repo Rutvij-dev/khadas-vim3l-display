@@ -1,0 +1,127 @@
+From 5bf467673a135a33043e2486611b32a0bd109861 Mon Sep 17 00:00:00 2001
+From: Rutvij Trivedi <rutvij.trivedi@sisignals.com>
+Date: Sat, 23 Feb 2021 01:03:12 +0530
+Subject: [PATCH 1/1] FBTFT-ST7735R on kvim3l over SPI
+
+diff --git a/arch/arm64/boot/dts/amlogic/kvim3l_linux.dts b/arch/arm64/boot/dts/amlogic/kvim3l_linux.dts
+index 16b2f60f584e..1544298618fa 100644
+--- a/arch/arm64/boot/dts/amlogic/kvim3l_linux.dts
++++ b/arch/arm64/boot/dts/amlogic/kvim3l_linux.dts
+@@ -1628,7 +1628,7 @@
+ &pwm_ef {
+ 	status = "okay";
+ 	pinctrl-names = "default";
+-	pinctrl-0 = <&pwm_f_pins2>;
++	pinctrl-0 = <&pwm_f_pins1>;
+ };
+ 
+ &dwc3 {
+@@ -1751,7 +1751,7 @@
+ 
+ &pcie_A {
+ 	reset-gpio = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+-	status = "disabled";
++	status = "okay";
+ };
+ 
+ &meson_cooldev {
+@@ -1784,17 +1784,17 @@
+ };
+ 
+ &spicc1 {
+-	status = "disabled";
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&spicc1_pins>;
+-	cs-gpios = <&gpio GPIOH_6 0>;
++	//cs-gpios = <&gpio GPIOH_6 0>;
++	status = "okay";
+ 
+ 	spidev@1 {
+ 		status = "okay";
+ 
+ 		compatible = "linux,spidev";
+ 		/* spi default max clock 100Mhz */
+-		spi-max-frequency = <100000000>;
++		spi-max-frequency = <32000000>;
+ 		reg = <1>;
+ 	};
+ };
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index b4c4d823569a..d5bb31f72042 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -245,6 +245,9 @@ CONFIG_SPI_PL022=y
+ CONFIG_SPI_QUP=y
+ CONFIG_SPI_SPIDEV=m
+ CONFIG_SPI_S3C64XX=y
++CONFIG_FB_TFT=m
++CONFIG_FB_TFT_ST7735R=m
++CONFIG_FB_TFT_FBTFT_DEVICE=m	
+ CONFIG_SPMI=y
+ CONFIG_PINCTRL_SINGLE=y
+ CONFIG_PINCTRL_MAX77620=y
+diff --git a/arch/arm64/configs/kvims_defconfig b/arch/arm64/configs/kvims_defconfig
+index 2624d50bfee2..41c3937b6f64 100644
+--- a/arch/arm64/configs/kvims_defconfig
++++ b/arch/arm64/configs/kvims_defconfig
+@@ -558,8 +558,6 @@ CONFIG_VIDEO_CX231XX=y
+ # CONFIG_VIDEO_CX231XX_RC is not set
+ CONFIG_VIDEO_CX231XX_DVB=y
+ CONFIG_DRM=y
+-CONFIG_BACKLIGHT_LCD_SUPPORT=y
+-CONFIG_BACKLIGHT_CLASS_DEVICE=y
+ CONFIG_FRAMEBUFFER_CONSOLE=y
+ CONFIG_FRAMEBUFFER_CONSOLE_ROTATION=y
+ CONFIG_LOGO=y
+@@ -648,6 +646,9 @@ CONFIG_UIO=y
+ CONFIG_UIO_PDRV_GENIRQ=y
+ CONFIG_VIRTIO_MMIO=y
+ CONFIG_STAGING=y
++CONFIG_FB_TFT=m
++CONFIG_FB_TFT_ST7735R=m
++CONFIG_FB_TFT_FBTFT_DEVICE=m
+ CONFIG_PM_DEVFREQ=y
+ CONFIG_DEVFREQ_GOV_SIMPLE_ONDEMAND=y
+ CONFIG_DEVFREQ_GOV_PERFORMANCE=y
+diff --git a/drivers/staging/fbtft/fbtft_device.c b/drivers/staging/fbtft/fbtft_device.c
+index e9211831b6a1..77fbc6437f08 100644
+--- a/drivers/staging/fbtft/fbtft_device.c
++++ b/drivers/staging/fbtft/fbtft_device.c
+@@ -284,9 +284,10 @@ static struct fbtft_device_display displays[] = {
+ 					.backlight = 1,
+ 				},
+ 				.gpios = (const struct fbtft_gpio []) {
+-					{ "reset", 25 },
+-					{ "dc", 24 },
+-					{ "led", 18 },
++					{ "reset", 461 },
++					{ "dc", 463 },
++					{ "led", 460 },
++					{ "cs", 433 },
+ 					{},
+ 				},
+ 				.gamma = ADAFRUIT18_GAMMA,
+@@ -307,10 +308,11 @@ static struct fbtft_device_display displays[] = {
+ 				},
+ 				.bgr = true,
+ 				.gpios = (const struct fbtft_gpio []) {
+-					{ "reset", 25 },
+-					{ "dc", 24 },
+-					{ "led", 18 },
+-					{},
++                                        { "reset", 461 },
++                                        { "dc", 463 },
++                                        { "led", 460 },
++					{ "cs", 433 },
++                                        {},
+ 				},
+ 				.gamma = ADAFRUIT18_GAMMA,
+ 			}
+@@ -1574,6 +1576,7 @@ static int __init fbtft_device_init(void)
+ 	if (p_device && (verbose > 1))
+ 		pr_p_devices();
+ 
++	pr_info("%s probe done\n",__func__);
+ 	return 0;
+ }
+ 
